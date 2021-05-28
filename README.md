@@ -1,8 +1,14 @@
 ## About
+[![](https://img.shields.io/github/license/whilein/just-futures)](LICENSE)
+[![npm](https://img.shields.io/npm/v/just-futures)](https://www.npmjs.com/package/just-futures)
 [![npm](https://img.shields.io/npm/dw/just-futures)](https://www.npmjs.com/package/just-futures)
 
 That simple library allows you to work with 'Futures': map, combine and compose them
 
+## Installation
+```
+npm i --save just-futures
+```
 ## Examples
 ```ts
 const future = Future.incompleted<number>(); // also you can use new Future<number>();
