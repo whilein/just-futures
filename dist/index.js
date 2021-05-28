@@ -121,8 +121,4 @@ var Future = /** @class */ (function () {
     return Future;
 }());
 exports.default = Future;
-var future = new Future();
-future.complete(new Error("Something went wrong"));
-future.catch(function (error) { return console.log("Error occurred: " + error); });
-future.then(function (success) { return console.log("Success: " + success); });
 //# sourceMappingURL=index.js.map
