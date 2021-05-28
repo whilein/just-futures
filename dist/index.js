@@ -14,9 +14,15 @@
 // limitations under the License.
 Object.defineProperty(exports, "__esModule", { value: true });
 var Future = /** @class */ (function () {
-    function Future() {
+    function Future(value) {
         this.ops = [];
+        this.value = value;
     }
+    Future.ofPromise = function (promise) {
+        var future = new Future();
+        promise.then(future.complete);
+        return future;
+    };
     Future.prototype.run = function (op) {
         if (this.value !== undefined) {
             op(this.value);
@@ -38,14 +44,11 @@ var Future = /** @class */ (function () {
         }
         this.value = value;
         while (this.ops.length) {
-            var op = this.ops.pop();
+            var op = this.ops.shift();
             if (op !== undefined) {
                 op(value);
             }
         }
-    };
-    Future.prototype.await = function () {
-        throw new Error('TODO');
     };
     Future.prototype.then = function (op) {
         return this.run(op);
@@ -80,4 +83,8 @@ var Future = /** @class */ (function () {
     return Future;
 }());
 exports.default = Future;
+var future = new Future();
+future.map(function (num) { return num * 10 / 2; }).then(console.log);
+future.map(function (num) { return "Number: " + num; }).then(console.log);
+future.complete(1);
 //# sourceMappingURL=index.js.map

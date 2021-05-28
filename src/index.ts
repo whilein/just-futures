@@ -16,6 +16,25 @@ export default class Future<T> {
     private value?: T;
     private ops: ((input: T) => void)[] = [];
     
+    constructor(value?: T) {
+        this.value = value;
+    }
+
+    static incompleted<T>(): Future<T> {
+        return new Future<T>();
+    }
+
+    static completed<T>(value: T): Future<T> {
+        return new Future<T>(value);
+    }
+
+    static ofPromise<T>(promise: Promise<T>): Future<T> {
+        const future = new Future<T>();
+        promise.then(future.complete);
+
+        return future;
+    }
+
     private run(op: (input: T) => void): Future<T> {
         if (this.value !== undefined) {
             op(this.value);
@@ -24,7 +43,7 @@ export default class Future<T> {
         }
 
         return this;
-    } 
+    }
     
     isCompleted(): boolean {
         return this.value !== undefined;
@@ -42,16 +61,12 @@ export default class Future<T> {
         this.value = value;
 
         while (this.ops.length) { 
-            const op = this.ops.pop();
+            const op = this.ops.shift();
             
             if (op !== undefined) {
                 op(value);
             }
         }
-    }
-
-    await(): T {
-        throw new Error('TODO');
     }
 
     then(op: (input: T) => void): Future<T> {
