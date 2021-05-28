@@ -15,55 +15,93 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var Future = /** @class */ (function () {
     function Future(value) {
-        this.ops = [];
+        this.callbacks = [];
         this.value = value;
     }
+    Future.incompleted = function () {
+        return new Future();
+    };
+    Future.completed = function (value) {
+        return new Future(value);
+    };
+    Future.completedExceptionally = function (error) {
+        return new Future(error);
+    };
     Future.ofPromise = function (promise) {
         var future = new Future();
-        promise.then(future.complete);
+        promise.then(future.complete, future.complete);
         return future;
     };
-    Future.prototype.run = function (op) {
-        if (this.value !== undefined) {
-            op(this.value);
+    Future.prototype.when = function (callback) {
+        var value = this.value;
+        if (value !== undefined) {
+            callback(value);
         }
         else {
-            this.ops.push(op);
+            this.callbacks.push(callback);
         }
         return this;
+    };
+    Future.prototype.whenError = function (callback) {
+        return this.when(function (result) {
+            if (!(result instanceof Error)) {
+                return;
+            }
+            callback(result);
+        });
+    };
+    Future.prototype.whenSuccess = function (callback) {
+        return this.when(function (result) {
+            if (result instanceof Error) {
+                return;
+            }
+            callback(result);
+        });
+    };
+    Future.prototype.catch = function (callback) {
+        return this.whenError(callback);
+    };
+    Future.prototype.mapError = function (callback) {
+        var future = new Future();
+        this.whenError(function (input) { return future.complete(callback(input)); });
+        return future;
     };
     Future.prototype.isCompleted = function () {
         return this.value !== undefined;
     };
     Future.prototype.getCompleted = function () {
-        return this.value;
+        return this.value instanceof Error
+            ? undefined : this.value;
     };
     Future.prototype.complete = function (value) {
         if (this.value !== undefined) {
             throw new Error("Future is already completed");
         }
         this.value = value;
-        while (this.ops.length) {
-            var op = this.ops.shift();
-            if (op !== undefined) {
-                op(value);
+        while (this.callbacks.length) {
+            var callback = this.callbacks.shift();
+            if (callback !== undefined) {
+                callback(value);
             }
         }
     };
-    Future.prototype.then = function (op) {
-        return this.run(op);
+    Future.prototype.whenComplete = function (callback) {
+        return this.when(callback);
     };
-    Future.prototype.map = function (op) {
+    Future.prototype.then = function (callback) {
+        return this.whenSuccess(callback);
+    };
+    Future.prototype.map = function (callback) {
         var future = new Future();
-        this.run(function (input) { return future.complete(op(input)); });
+        this.whenSuccess(function (input) { return future.complete(callback(input)); });
         return future;
     };
-    Future.prototype.compose = function (op) {
+    Future.prototype.compose = function (callback) {
         var future = new Future();
-        this.run(function (input) { return op(input).then(future.complete); });
+        this.whenSuccess(function (input) { return callback(input).then(future.complete); });
         return future;
     };
-    Future.prototype.combine = function (anotherFuture, op) {
+    Future.prototype.combine = function (anotherFuture, callback) {
         var newFuture = new Future();
         var thatFuture = this;
         var stateThat;
@@ -74,7 +112,7 @@ var Future = /** @class */ (function () {
             if (another !== undefined)
                 stateAnother = another;
             if (stateThat !== undefined && stateAnother !== undefined)
-                newFuture.complete(op(stateThat, stateAnother));
+                newFuture.complete(callback(stateThat, stateAnother));
         }
         thatFuture.then(function (input) { return complete(input, undefined); });
         anotherFuture.then(function (input) { return complete(undefined, input); });
@@ -84,7 +122,7 @@ var Future = /** @class */ (function () {
 }());
 exports.default = Future;
 var future = new Future();
-future.map(function (num) { return num * 10 / 2; }).then(console.log);
-future.map(function (num) { return "Number: " + num; }).then(console.log);
-future.complete(1);
+future.complete(new Error("Something went wrong"));
+future.catch(function (error) { return console.log("Error occurred: " + error); });
+future.then(function (success) { return console.log("Success: " + success); });
 //# sourceMappingURL=index.js.map
