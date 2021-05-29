@@ -15,9 +15,17 @@
 export type AnyCallback<T> = (input: T | Error) => void;
 export type SuccessCallback<T> = (input: T) => void;
 export type SuccessMapCallback<T, A> = (input: T) => A;
-export type ErrorCallback = (input: Error) => void;
-export type ErrorMapCallback<A> = (input: Error) => A;
+export type ErrorCallback = <ECast = Error>(input: ECast) => void;
+export type ErrorMapCallback<A> = <ECast = Error>(input: ECast) => A;
 export type CombineCallback<T, A, U> = (x: T, y: A) => U;
+
+export class FuturePromiseError<T> extends Error {
+    constructor(
+        readonly rejectValue: T
+    ) {
+        super("Promise were rejected");
+    }
+}
 
 export default class Future<T> {
     private value?: T | Error;
@@ -41,7 +49,7 @@ export default class Future<T> {
 
     static ofPromise<T>(promise: Promise<T>): Future<T> {
         const future = new Future<T>();
-        promise.then(future.complete, future.complete);
+        promise.then(future.complete, reject => future.complete(new FuturePromiseError(reject)));
 
         return future;
     }

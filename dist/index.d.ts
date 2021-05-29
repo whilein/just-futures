@@ -1,9 +1,13 @@
 export declare type AnyCallback<T> = (input: T | Error) => void;
 export declare type SuccessCallback<T> = (input: T) => void;
 export declare type SuccessMapCallback<T, A> = (input: T) => A;
-export declare type ErrorCallback = (input: Error) => void;
-export declare type ErrorMapCallback<A> = (input: Error) => A;
+export declare type ErrorCallback = <ECast = Error>(input: ECast) => void;
+export declare type ErrorMapCallback<A> = <ECast = Error>(input: ECast) => A;
 export declare type CombineCallback<T, A, U> = (x: T, y: A) => U;
+export declare class FuturePromiseError<T> extends Error {
+    readonly rejectValue: T;
+    constructor(rejectValue: T);
+}
 export default class Future<T> {
     private value?;
     private callbacks;
