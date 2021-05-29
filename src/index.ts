@@ -108,29 +108,29 @@ export default class Future<T> {
         }
     }
 
-    whenComplete(callback: AnyCallback<T>): Future<T> {
-        return this.when(callback);
+    whenCompletethen<TCast = T>(callback: AnyCallback<TCast>): Future<T> {
+        return this.when(result => callback(result as any as TCast));
     }
 
-    then(callback: SuccessCallback<T>): Future<T> {
-        return this.whenSuccess(callback);
+    then<TCast = T>(callback: SuccessCallback<TCast>): Future<T> {
+        return this.whenSuccess(result => callback(result as any as TCast));
     }
 
-    map<A>(callback: SuccessMapCallback<T, A>): Future<A> {
+    map<A, TCast = T>(callback: SuccessMapCallback<TCast, A>): Future<A> {
         const future = new Future<A>();
-        this.whenSuccess(input => future.complete(callback(input)));
+        this.whenSuccess(input => future.complete(callback(input as any as TCast)));
 
         return future;
     }
 
-    compose<A>(callback: SuccessMapCallback<T, Future<A>>): Future<A> {
+    compose<A, TCast = T>(callback: SuccessMapCallback<TCast, Future<A>>): Future<A> {
         const future = new Future<A>();
-        this.whenSuccess(input => callback(input).then(future.complete));
+        this.whenSuccess(input => callback(input as any as TCast).then(future.complete));
 
         return future;
     }
 
-    combine<A, U>(anotherFuture: Future<A>, callback: CombineCallback<T, A, U>): Future<U> {
+    combine<A, U, TCast = T, ACast = A>(anotherFuture: Future<A>, callback: CombineCallback<TCast, ACast, U>): Future<U> {
         const future = new Future<U>();
 
         var stateThat: T;
@@ -144,7 +144,7 @@ export default class Future<T> {
                 stateAnother = another;
 
             if (stateThat !== undefined && stateAnother !== undefined)
-            future.complete(callback(stateThat, stateAnother));
+            future.complete(callback(stateThat as any as TCast, stateAnother as any as ACast));
         }
 
         this.then(input => complete(input, undefined));

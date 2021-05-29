@@ -85,11 +85,11 @@ var Future = /** @class */ (function () {
             }
         }
     };
-    Future.prototype.whenComplete = function (callback) {
-        return this.when(callback);
+    Future.prototype.whenCompletethen = function (callback) {
+        return this.when(function (result) { return callback(result); });
     };
     Future.prototype.then = function (callback) {
-        return this.whenSuccess(callback);
+        return this.whenSuccess(function (result) { return callback(result); });
     };
     Future.prototype.map = function (callback) {
         var future = new Future();

@@ -20,9 +20,9 @@ export default class Future<T> {
     isCompleted(): boolean;
     getCompleted(): T | undefined;
     complete(value: T | Error): void;
-    whenComplete(callback: AnyCallback<T>): Future<T>;
-    then(callback: SuccessCallback<T>): Future<T>;
-    map<A>(callback: SuccessMapCallback<T, A>): Future<A>;
-    compose<A>(callback: SuccessMapCallback<T, Future<A>>): Future<A>;
-    combine<A, U>(anotherFuture: Future<A>, callback: CombineCallback<T, A, U>): Future<U>;
+    whenCompletethen<TCast = T>(callback: AnyCallback<TCast>): Future<T>;
+    then<TCast = T>(callback: SuccessCallback<TCast>): Future<T>;
+    map<A, TCast = T>(callback: SuccessMapCallback<TCast, A>): Future<A>;
+    compose<A, TCast = T>(callback: SuccessMapCallback<TCast, Future<A>>): Future<A>;
+    combine<A, U, TCast = T, ACast = A>(anotherFuture: Future<A>, callback: CombineCallback<TCast, ACast, U>): Future<U>;
 }
