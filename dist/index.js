@@ -102,8 +102,7 @@ var Future = /** @class */ (function () {
         return future;
     };
     Future.prototype.combine = function (anotherFuture, callback) {
-        var newFuture = new Future();
-        var thatFuture = this;
+        var future = new Future();
         var stateThat;
         var stateAnother;
         function complete(that, another) {
@@ -112,11 +111,11 @@ var Future = /** @class */ (function () {
             if (another !== undefined)
                 stateAnother = another;
             if (stateThat !== undefined && stateAnother !== undefined)
-                newFuture.complete(callback(stateThat, stateAnother));
+                future.complete(callback(stateThat, stateAnother));
         }
-        thatFuture.then(function (input) { return complete(input, undefined); });
+        this.then(function (input) { return complete(input, undefined); });
         anotherFuture.then(function (input) { return complete(undefined, input); });
-        return newFuture;
+        return future;
     };
     return Future;
 }());

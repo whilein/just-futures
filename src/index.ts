@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-type Operation<T> = (input: T | Error) => void;
+export type AnyCallback<T> = (input: T | Error) => void;
+export type SuccessCallback<T> = (input: T) => void;
+export type SuccessMapCallback<T, A> = (input: T) => A;
+export type ErrorCallback = (input: Error) => void;
+export type ErrorMapCallback<A> = (input: Error) => A;
+export type CombineCallback<T, A, U> = (x: T, y: A) => U;
 
 export default class Future<T> {
     private value?: T | Error;
-    private callbacks: Operation<T>[] = [];
+    private callbacks: AnyCallback<T>[] = [];
     
     constructor(value?: T | Error) {
         this.value = value;
@@ -41,11 +46,11 @@ export default class Future<T> {
         return future;
     }
 
-    private when(callback: (result: T | Error) => void): Future<T> {
+    private when(callback: AnyCallback<T>): Future<T> {
         const value = this.value;
 
         if (value !== undefined) {
-            callback(value as Error);
+            callback(value);
         } else {
             this.callbacks.push(callback);
         }
@@ -53,25 +58,25 @@ export default class Future<T> {
         return this;
     }
 
-    private whenError(callback: (error: Error) => void): Future<T> {
+    private whenError(callback: ErrorCallback): Future<T> {
         return this.when(result => {
             if (!(result instanceof Error)) { return; }
             callback(result);
         });
     }
 
-    private whenSuccess(callback: (input: T) => void): Future<T> {
+    private whenSuccess(callback: SuccessCallback<T>): Future<T> {
         return this.when(result => {
             if (result instanceof Error) { return; }
             callback(result);
         });
     }
 
-    catch(callback: (error: Error) => void): Future<T> {
+    catch(callback: ErrorCallback): Future<T> {
         return this.whenError(callback);
     }
 
-    mapError<A>(callback: (error: Error) => A): Future<A> {
+    mapError<A>(callback: ErrorMapCallback<A>): Future<A> {
         const future = new Future<A>();
         this.whenError(input => future.complete(callback(input)));
 
@@ -103,31 +108,30 @@ export default class Future<T> {
         }
     }
 
-    whenComplete(callback: (input: T | Error) => void): Future<T> {
+    whenComplete(callback: AnyCallback<T>): Future<T> {
         return this.when(callback);
     }
 
-    then(callback: (input: T) => void): Future<T> {
+    then(callback: SuccessCallback<T>): Future<T> {
         return this.whenSuccess(callback);
     }
 
-    map<A>(callback: (input: T) => A): Future<A> {
+    map<A>(callback: SuccessMapCallback<T, A>): Future<A> {
         const future = new Future<A>();
         this.whenSuccess(input => future.complete(callback(input)));
 
         return future;
     }
 
-    compose<A>(callback: (input: T) => Future<A>): Future<A> {
+    compose<A>(callback: SuccessMapCallback<T, Future<A>>): Future<A> {
         const future = new Future<A>();
         this.whenSuccess(input => callback(input).then(future.complete));
 
         return future;
     }
 
-    combine<A, U>(anotherFuture: Future<A>, callback: (inputThat: T, inputAnother: A) => U): Future<U> {
-        const newFuture = new Future<U>();
-        const thatFuture = this;
+    combine<A, U>(anotherFuture: Future<A>, callback: CombineCallback<T, A, U>): Future<U> {
+        const future = new Future<U>();
 
         var stateThat: T;
         var stateAnother: A;
@@ -140,13 +144,13 @@ export default class Future<T> {
                 stateAnother = another;
 
             if (stateThat !== undefined && stateAnother !== undefined)
-                newFuture.complete(callback(stateThat, stateAnother));
+            future.complete(callback(stateThat, stateAnother));
         }
 
-        thatFuture.then(input => complete(input, undefined));
+        this.then(input => complete(input, undefined));
         anotherFuture.then(input => complete(undefined, input));
 
-        return newFuture;
+        return future;
     }
 
 }

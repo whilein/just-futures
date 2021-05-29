@@ -1,3 +1,9 @@
+export declare type AnyCallback<T> = (input: T | Error) => void;
+export declare type SuccessCallback<T> = (input: T) => void;
+export declare type SuccessMapCallback<T, A> = (input: T) => A;
+export declare type ErrorCallback = (input: Error) => void;
+export declare type ErrorMapCallback<A> = (input: Error) => A;
+export declare type CombineCallback<T, A, U> = (x: T, y: A) => U;
 export default class Future<T> {
     private value?;
     private callbacks;
@@ -9,14 +15,14 @@ export default class Future<T> {
     private when;
     private whenError;
     private whenSuccess;
-    catch(callback: (error: Error) => void): Future<T>;
-    mapError<A>(callback: (error: Error) => A): Future<A>;
+    catch(callback: ErrorCallback): Future<T>;
+    mapError<A>(callback: ErrorMapCallback<A>): Future<A>;
     isCompleted(): boolean;
     getCompleted(): T | undefined;
     complete(value: T | Error): void;
-    whenComplete(callback: (input: T | Error) => void): Future<T>;
-    then(callback: (input: T) => void): Future<T>;
-    map<A>(callback: (input: T) => A): Future<A>;
-    compose<A>(callback: (input: T) => Future<A>): Future<A>;
-    combine<A, U>(anotherFuture: Future<A>, callback: (inputThat: T, inputAnother: A) => U): Future<U>;
+    whenComplete(callback: AnyCallback<T>): Future<T>;
+    then(callback: SuccessCallback<T>): Future<T>;
+    map<A>(callback: SuccessMapCallback<T, A>): Future<A>;
+    compose<A>(callback: SuccessMapCallback<T, Future<A>>): Future<A>;
+    combine<A, U>(anotherFuture: Future<A>, callback: CombineCallback<T, A, U>): Future<U>;
 }
