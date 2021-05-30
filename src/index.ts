@@ -29,7 +29,7 @@ export class FuturePromiseError<T> extends Error {
 
 export default class Future<T> {
     private value?: T | Error;
-    private callbacks: AnyCallback<T>[] = [];
+    private readonly callbacks: AnyCallback<T>[] = [];
     
     constructor(value?: T | Error) {
         this.value = value;
@@ -49,7 +49,7 @@ export default class Future<T> {
 
     static ofPromise<T>(promise: Promise<T>): Future<T> {
         const future = new Future<T>();
-        promise.then(future.complete, reject => future.complete(new FuturePromiseError(reject)));
+        future.completeWithPromise(promise);
 
         return future;
     }
@@ -80,17 +80,6 @@ export default class Future<T> {
         });
     }
 
-    catch(callback: ErrorCallback): Future<T> {
-        return this.whenError(callback);
-    }
-
-    mapError<A>(callback: ErrorMapCallback<A>): Future<A> {
-        const future = new Future<A>();
-        this.whenError(input => future.complete(callback(input)));
-
-        return future;
-    }
-    
     isCompleted(): boolean {
         return this.value !== undefined;
     }
@@ -100,9 +89,27 @@ export default class Future<T> {
             ? undefined : this.value;
     }
 
-    complete(value: T | Error): void {
+    private completeWithPromise(promise: Promise<T>) {
+        promise.then(success => this.complete(success), error => this.complete(new FuturePromiseError(error)));
+    }
+
+    private completeWithFuture(future: Future<T>) {
+        future.when(result => this.complete(result));
+    }
+
+    complete(value: T | Error | Promise<T> | Future<T>): void {              
         if (this.value !== undefined) {
             throw new Error("Future is already completed");
+        }
+
+        if (value instanceof Promise) {
+            this.completeWithPromise(value);
+            return;
+        }
+
+        if (value instanceof Future) {
+            this.completeWithFuture(value);
+            return;
         }
 
         this.value = value;
@@ -116,7 +123,11 @@ export default class Future<T> {
         }
     }
 
-    whenCompletethen<TCast = T>(callback: AnyCallback<TCast>): Future<T> {
+    catch(callback: ErrorCallback): Future<T> {
+        return this.whenError(callback);
+    }
+
+    whenComplete<TCast = T>(callback: AnyCallback<TCast>): Future<T> {
         return this.when(result => callback(result as any as TCast));
     }
 
@@ -124,10 +135,18 @@ export default class Future<T> {
         return this.whenSuccess(result => callback(result as any as TCast));
     }
 
-    map<A, TCast = T>(callback: SuccessMapCallback<TCast, A>): Future<A> {
+    onThat(action: (future: Future<T>) => any): Future<T> {
+        action(this);
+        return this;
+    }
+
+    map<A, TCast = T>(callback: SuccessMapCallback<TCast, A>, errorCallback?: ErrorMapCallback<A>): Future<A> {
         const future = new Future<A>();
         this.whenSuccess(input => future.complete(callback(input as any as TCast)));
 
+        if (errorCallback !== undefined)
+            this.whenError(input => future.complete(errorCallback(input as any as TCast)));
+        
         return future;
     }
 

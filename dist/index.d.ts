@@ -19,14 +19,15 @@ export default class Future<T> {
     private when;
     private whenError;
     private whenSuccess;
-    catch(callback: ErrorCallback): Future<T>;
-    mapError<A>(callback: ErrorMapCallback<A>): Future<A>;
     isCompleted(): boolean;
     getCompleted(): T | undefined;
-    complete(value: T | Error): void;
-    whenCompletethen<TCast = T>(callback: AnyCallback<TCast>): Future<T>;
+    private completeWithPromise;
+    private completeWithFuture;
+    complete(value: T | Error | Promise<T> | Future<T>): void;
+    catch(callback: ErrorCallback): Future<T>;
+    whenComplete<TCast = T>(callback: AnyCallback<TCast>): Future<T>;
     then<TCast = T>(callback: SuccessCallback<TCast>): Future<T>;
-    map<A, TCast = T>(callback: SuccessMapCallback<TCast, A>): Future<A>;
+    map<A, TCast = T>(callback: SuccessMapCallback<TCast, A>, errorCallback?: ErrorMapCallback<A>): Future<A>;
     compose<A, TCast = T>(callback: SuccessMapCallback<TCast, Future<A>>): Future<A>;
     combine<A, U, TCast = T, ACast = A>(anotherFuture: Future<A>, callback: CombineCallback<TCast, ACast, U>): Future<U>;
 }

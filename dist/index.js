@@ -55,7 +55,7 @@ var Future = /** @class */ (function () {
     };
     Future.ofPromise = function (promise) {
         var future = new Future();
-        promise.then(future.complete, function (reject) { return future.complete(new FuturePromiseError(reject)); });
+        future.completeWithPromise(promise);
         return future;
     };
     Future.prototype.when = function (callback) {
@@ -84,14 +84,6 @@ var Future = /** @class */ (function () {
             callback(result);
         });
     };
-    Future.prototype.catch = function (callback) {
-        return this.whenError(callback);
-    };
-    Future.prototype.mapError = function (callback) {
-        var future = new Future();
-        this.whenError(function (input) { return future.complete(callback(input)); });
-        return future;
-    };
     Future.prototype.isCompleted = function () {
         return this.value !== undefined;
     };
@@ -99,9 +91,25 @@ var Future = /** @class */ (function () {
         return this.value instanceof Error
             ? undefined : this.value;
     };
+    Future.prototype.completeWithPromise = function (promise) {
+        var _this = this;
+        promise.then(function (success) { return _this.complete(success); }, function (error) { return _this.complete(new FuturePromiseError(error)); });
+    };
+    Future.prototype.completeWithFuture = function (future) {
+        var _this = this;
+        future.when(function (result) { return _this.complete(result); });
+    };
     Future.prototype.complete = function (value) {
         if (this.value !== undefined) {
             throw new Error("Future is already completed");
+        }
+        if (value instanceof Promise) {
+            this.completeWithPromise(value);
+            return;
+        }
+        if (value instanceof Future) {
+            this.completeWithFuture(value);
+            return;
         }
         this.value = value;
         while (this.callbacks.length) {
@@ -111,15 +119,20 @@ var Future = /** @class */ (function () {
             }
         }
     };
-    Future.prototype.whenCompletethen = function (callback) {
+    Future.prototype.catch = function (callback) {
+        return this.whenError(callback);
+    };
+    Future.prototype.whenComplete = function (callback) {
         return this.when(function (result) { return callback(result); });
     };
     Future.prototype.then = function (callback) {
         return this.whenSuccess(function (result) { return callback(result); });
     };
-    Future.prototype.map = function (callback) {
+    Future.prototype.map = function (callback, errorCallback) {
         var future = new Future();
         this.whenSuccess(function (input) { return future.complete(callback(input)); });
+        if (errorCallback !== undefined)
+            this.whenError(function (input) { return future.complete(callback(input)); });
         return future;
     };
     Future.prototype.compose = function (callback) {
