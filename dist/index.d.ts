@@ -10,23 +10,23 @@ export declare class FuturePromiseError<T> extends Error {
 }
 export default class Future<T> {
     private value?;
-    private callbacks;
+    private readonly callbacks;
     constructor(value?: T | Error);
     static incompleted<T>(): Future<T>;
     static completed<T>(value: T): Future<T>;
     static completedExceptionally<T>(error: Error): Future<T>;
     static ofPromise<T>(promise: Promise<T>): Future<T>;
     private when;
-    private whenError;
-    private whenSuccess;
+    private notify;
     isCompleted(): boolean;
     getCompleted(): T | undefined;
-    private completeWithPromise;
-    private completeWithFuture;
-    complete(value: T | Error | Promise<T> | Future<T>): void;
+    completeWithPromise(promise: Promise<T>): void;
+    complete(value: T | Error): void;
     catch(callback: ErrorCallback): Future<T>;
     whenComplete<TCast = T>(callback: AnyCallback<TCast>): Future<T>;
     then<TCast = T>(callback: SuccessCallback<TCast>): Future<T>;
+    onThat(action: (future: Future<T>) => any): Future<T>;
+    mapPromise<A, TCast = T>(callback: SuccessMapCallback<TCast, Promise<A>>, errorCallback?: ErrorMapCallback<A>): Future<A>;
     map<A, TCast = T>(callback: SuccessMapCallback<TCast, A>, errorCallback?: ErrorMapCallback<A>): Future<A>;
     compose<A, TCast = T>(callback: SuccessMapCallback<TCast, Future<A>>): Future<A>;
     combine<A, U, TCast = T, ACast = A>(anotherFuture: Future<A>, callback: CombineCallback<TCast, ACast, U>): Future<U>;

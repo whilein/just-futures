@@ -68,21 +68,13 @@ var Future = /** @class */ (function () {
         }
         return this;
     };
-    Future.prototype.whenError = function (callback) {
-        return this.when(function (result) {
-            if (!(result instanceof Error)) {
-                return;
+    Future.prototype.notify = function (value) {
+        while (this.callbacks.length) {
+            var callback = this.callbacks.shift();
+            if (callback !== undefined) {
+                callback(value);
             }
-            callback(result);
-        });
-    };
-    Future.prototype.whenSuccess = function (callback) {
-        return this.when(function (result) {
-            if (result instanceof Error) {
-                return;
-            }
-            callback(result);
-        });
+        }
     };
     Future.prototype.isCompleted = function () {
         return this.value !== undefined;
@@ -95,49 +87,68 @@ var Future = /** @class */ (function () {
         var _this = this;
         promise.then(function (success) { return _this.complete(success); }, function (error) { return _this.complete(new FuturePromiseError(error)); });
     };
-    Future.prototype.completeWithFuture = function (future) {
-        var _this = this;
-        future.when(function (result) { return _this.complete(result); });
-    };
     Future.prototype.complete = function (value) {
         if (this.value !== undefined) {
             throw new Error("Future is already completed");
         }
-        if (value instanceof Promise) {
-            this.completeWithPromise(value);
-            return;
-        }
-        if (value instanceof Future) {
-            this.completeWithFuture(value);
-            return;
-        }
-        this.value = value;
-        while (this.callbacks.length) {
-            var callback = this.callbacks.shift();
-            if (callback !== undefined) {
-                callback(value);
-            }
-        }
+        this.notify(this.value = value);
     };
     Future.prototype.catch = function (callback) {
-        return this.whenError(callback);
+        return this.when(function (result) {
+            if (result instanceof Error)
+                callback(result);
+        });
     };
     Future.prototype.whenComplete = function (callback) {
         return this.when(function (result) { return callback(result); });
     };
     Future.prototype.then = function (callback) {
-        return this.whenSuccess(function (result) { return callback(result); });
+        return this.when(function (result) {
+            if (!(result instanceof Error))
+                callback(result);
+        });
+    };
+    Future.prototype.onThat = function (action) {
+        action(this);
+        return this;
+    };
+    Future.prototype.mapPromise = function (callback, errorCallback) {
+        var future = new Future();
+        this.when(function (input) {
+            if (input instanceof Error) {
+                if (errorCallback !== undefined)
+                    future.complete(errorCallback(input));
+                future.notify(input);
+            }
+            else {
+                future.completeWithPromise(callback(input));
+            }
+        });
+        return future;
     };
     Future.prototype.map = function (callback, errorCallback) {
         var future = new Future();
-        this.whenSuccess(function (input) { return future.complete(callback(input)); });
-        if (errorCallback !== undefined)
-            this.whenError(function (input) { return future.complete(callback(input)); });
+        this.when(function (input) {
+            if (input instanceof Error) {
+                if (errorCallback !== undefined)
+                    future.complete(errorCallback(input));
+                future.notify(input);
+            }
+            else {
+                future.complete(callback(input));
+            }
+        });
         return future;
     };
     Future.prototype.compose = function (callback) {
         var future = new Future();
-        this.whenSuccess(function (input) { return callback(input).then(future.complete); });
+        this.when(function (input) {
+            if (input instanceof Error) {
+                future.notify(input);
+                return;
+            }
+            callback(input).then(future.complete);
+        });
         return future;
     };
     Future.prototype.combine = function (anotherFuture, callback) {
